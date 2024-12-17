@@ -60,4 +60,29 @@ class Donors(db.Model):
             "MEDICATIONS_code": self.MEDICAL_CONDITIONS_code,
             "MEDICAL_CONDITIONS_code": self.MEDICAL_CONDITIONS_code
         }
-        
+@app.route('/login', methods=['POST'])
+def login():
+    data = request.get_json()
+    username = data.get('username')
+    password = data.get('password')
+
+    if username == 'staff' and password == 'password':
+        token = create_access_token(identity="staff",additional_claims={"role": "admin"})
+        return jsonify({"Token": token}), 200
+    elif username == 'donor' and password == 'donorpass':
+        token = create_access_token(identity="donor", additional_claims={"role": "donor"})
+        return jsonify({"Token": token}), 200
+    else:
+        return jsonify({"msg": "Invalid username or password"}), 401
+    
+def role_required(*required_role):
+    def wrapper(fn):
+        @wraps(fn)
+        def decorator(*args, **kwargs):
+            verify_jwt_in_request()
+            claims = get_jwt()
+            if claims.get("role") not in required_role:
+                return jsonify({"success": False, "msg": "Access forbidden."}), 403
+            return fn(*args, **kwargs)
+        return decorator
+    return wrapper

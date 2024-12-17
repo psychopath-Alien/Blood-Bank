@@ -86,3 +86,15 @@ def role_required(*required_role):
             return fn(*args, **kwargs)
         return decorator
     return wrapper
+
+@app.route("/staff", methods=["GET"])
+@jwt_required()
+@role_required('admin')
+def get_all_staff():
+    staffs = Staff.query.all()
+    return jsonify(
+        {
+            "success": True,
+            "data": [staff.to_dict() for staff in staffs]
+        }
+    ), 200

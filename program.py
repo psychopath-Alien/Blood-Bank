@@ -98,3 +98,127 @@ def get_all_staff():
             "data": [staff.to_dict() for staff in staffs]
         }
     ), 200
+
+@app.route("/staff/<int:id>", methods=['GET'])
+@jwt_required()
+@role_required('admin')
+def get_single_staff(id):
+    staff= db.session.get(Staff, id)
+    if not staff:
+        return jsonify(
+            {
+                "success": False,
+                "error": "Staff not found"
+            }
+        ), 404
+    return jsonify(
+        {
+            "success": True,
+            "data": staff.to_dict()
+        }
+    ), 200
+
+@app.route("/staff", methods=['POST'])
+@jwt_required()
+@role_required('admin')
+def add_staff():
+    if not request.is_json:
+        return jsonify(
+            {
+                "success": False,
+                "error": "Content-type must be application/json"
+            }
+        ), 400
+
+    data = request.get_json(silent=True)
+    if not data:
+        return jsonify({"success": False, "error": "Invalid JSON"}), 400
+
+    required_fields = ["BLOOD_BANKS_id", "ADDRESS_id", "category", "gender","job_title", "name", "birthdate" ]
+    for field in required_fields:
+        if field not in data:
+            return jsonify(
+                {
+                    "success": False,
+                    "error": f"Missing field: {field}"
+                }
+            ), 400
+
+    try:
+        new_staff = Staff(
+            BLOOD_BANKS_id = data['BLOOD_BANKS_id'],
+            ADDRESS_id = data['ADDRESS_id'],
+            category = data['category'],
+            gender = data['gender'],
+            job_title = data['job_title'],
+            name = data['name'],
+            birthdate=data["birthdate"]
+       )
+        db.session.add(new_staff)
+        db.session.commit()
+        return jsonify(
+            {
+                "success": True,
+                "data": new_staff.to_dict()
+            }
+        ), 201
+    except Exception as e:
+        db.session.rollback()
+        return jsonify(
+            {
+                "success": False,
+                "error": str(e)
+            }
+        ), 500
+    
+@app.route("/staff/<int:id>", methods=["PUT"])
+@jwt_required()
+@role_required('admin')
+def update_staff(id):
+    staff = db.session.get(Staff, id)
+    if not staff:
+        return jsonify(
+            {
+                "success": False,
+                "error": "Staff not found"
+            }
+        ), 404
+
+    data = request.get_json(silent=True)
+    if not data:
+        return jsonify({"success": False, "error": "Invalid JSON"}), 400
+
+    updatable_fields = ["BLOOD_BANKS_id", "ADDRESS_id", "category", "gender","job_title", "name", "birthdate" ]
+    for field in updatable_fields:
+        if field in data:
+            setattr(staff, field, data[field])
+
+    db.session.commit()
+    return jsonify(
+        {
+            "success": True,
+            "data": staff.to_dict()
+        }
+    ), 200
+
+@app.route("/staff/<int:id>", methods=["DELETE"])
+@jwt_required()
+@role_required('admin')
+def delete_staff(id):
+    staff= db.session.get(Staff, id)
+    if not staff:
+        return jsonify(
+            {
+                "success": False,
+                "error": "Staff not found"
+            }
+        ), 404
+
+    db.session.delete(staff)
+    db.session.commit()
+    return jsonify(
+        {
+            "success": True,
+            "message": "Staff successfully deleted"
+        }
+    ), 200
